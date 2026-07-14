@@ -575,13 +575,11 @@ One benchmark result worth calling out explicitly: score reliability under the M
 
 ## Related Work
 
-- [CURA](https://github.com/royxlead/cura-python) - RAG-based medical QA for text-only question answering. RAG Evaluation Framework is the evaluation layer for systems like CURA: after building a retrieval pipeline, you need to measure how well it performs before shipping.
+- [MedVQA](https://github.com/royxforge/multimodal-medical-vqa) - RAG Evaluation Framework's UCM confidence scoring shares methodology with MedVQA's Monte Carlo Dropout uncertainty estimation. Both estimate confidence by measuring answer consistency across stochastic passes rather than relying on a single forward pass.
 
-- [MedVQA](https://github.com/royxlead/multimodal-medical-vqa) - RAG Evaluation Framework's UCM confidence scoring shares methodology with MedVQA's Monte Carlo Dropout uncertainty estimation. Both estimate confidence by measuring answer consistency across stochastic passes rather than relying on a single forward pass.
+- [Production Drift Detection](https://github.com/royxforge/production-drift-detection) - RAG Evaluation Framework evaluates individual interactions; Production Drift Detection monitors population-level trends over time. The entropy and margin signals tracked in ConfidenceMonitor are complementary to UCM: UCM runs at evaluation time, drift detection runs continuously in production.
 
-- [Production Drift Detection](https://github.com/royxlead/production-drift-detection) - RAG Evaluation Framework evaluates individual interactions; Production Drift Detection monitors population-level trends over time. The entropy and margin signals tracked in ConfidenceMonitor are complementary to UCM: UCM runs at evaluation time, drift detection runs continuously in production.
-
-- [Loss Landscape Analysis](https://github.com/royxlead/loss-landscape-analysis) - The calibration analysis there (BCE vs MSE, label smoothing for better-calibrated outputs) directly informs how LLM judges are prompted in this library. Overconfident judge responses are a known failure mode; the prompts here are designed to elicit calibrated, hedged evaluations rather than binary 0/1 scores.
+- [Loss Landscape Analysis](https://github.com/royxforge/loss-landscape-analysis) - The calibration analysis there (BCE vs MSE, label smoothing for better-calibrated outputs) directly informs how LLM judges are prompted in this library. Overconfident judge responses are a known failure mode; the prompts here are designed to elicit calibrated, hedged evaluations rather than binary 0/1 scores.
 
 ---
 
@@ -592,12 +590,12 @@ One benchmark result worth calling out explicitly: score reliability under the M
   author = {Roy, Sourav},
   title  = {RAG Evaluation Framework: The Missing Evaluation Layer for Production RAG Systems},
   year   = {2026},
-  url    = {https://github.com/royxlead/rag-evaluation-framework}
+  url    = {https://github.com/royxforge/rag-evaluation-framework}
 }
 ```
 
 ---
 
 <p align="center">
-  <sub>Built by <a href="https://github.com/royxlead">Sourav Roy</a> · Founding AI/ML Engineer · Yuga AI</sub>
+  <sub>Built by <a href="https://github.com/royxforge">Sourav Roy</a> · Artificial Intelligence Engineer · Accure Inc.</sub>
 </p>
