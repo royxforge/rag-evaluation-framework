@@ -17,6 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.0] - 2026-07-20
+
+### Added
+
+- **Community health files**: Added `CODE_OF_CONDUCT.md` (Contributor Covenant v2.1), `CONTRIBUTING.md` (contribution guidelines), `SECURITY.md` (vulnerability reporting policy), and `CITATION.cff` (citation metadata). These files establish project governance, community participation guidelines, and academic attribution framework.
+
+---
+
 ## [0.1.0] - 2026-06-20
 
 ### Added
@@ -144,5 +152,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/royxlead/rag-evaluation-framework/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/royxlead/rag-evaluation-framework/releases/tag/v0.1.0
+[Unreleased]: https://github.com/royxforge/rag-evaluation-framework/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/royxforge/rag-evaluation-framework/releases/tag/v0.2.0
+[0.1.0]: https://github.com/royxforge/rag-evaluation-framework/releases/tag/v0.1.0

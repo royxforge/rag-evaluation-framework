@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use this software in your research, please cite it as below."
+authors:
+  - family-names: Roy
+    given-names: Sourav
+    email: royxforge@proton.me
+    orcid: ""
+title: "RAG Evaluation Framework: The Missing Evaluation Layer for Production RAG Systems"
+version: 0.3.0
+date-released: 2026-07-20
+url: "https://github.com/royxforge/rag-evaluation-framework"
+repository-code: "https://github.com/royxforge/rag-evaluation-framework"
+license: Apache-2.0
+keywords:
+  - RAG evaluation
+  - faithfulness
+  - hallucination detection
+  - retrieval precision
+  - unsupervised confidence
+  - LLM-as-judge
