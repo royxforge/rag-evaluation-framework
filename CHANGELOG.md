@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.0] - 2026-07-20
+
+### Changed
+
+- **Git remote URL**: Updated from `royxlead/rag-evaluation-framework.git` to `royxforge/rag-evaluation-framework.git` to reflect the permanent repository home under the royxforge GitHub organization.
+- **Project metadata URLs**: Updated `Homepage`, `Documentation`, and `Repository` URLs in `pyproject.toml` from `royxlead` to `royxforge`.
+
+---
+
 ## [Unreleased]
 
 ### Changed

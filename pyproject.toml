@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rag-evaluation-framework"
-version = "0.1.0"
+version = "0.3.0"
 description = "Production-grade RAG evaluation framework"
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -24,9 +24,9 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/royxlead/rag-evaluation-framework"
-Documentation = "https://royxlead.github.io/rag-evaluation-framework"
-Repository = "https://github.com/royxlead/rag-evaluation-framework"
+Homepage = "https://github.com/royxforge/rag-evaluation-framework"
+Documentation = "https://royxforge.github.io/rag-evaluation-framework"
+Repository = "https://github.com/royxforge/rag-evaluation-framework"
 
 [project.scripts]
 rag-evaluation-framework = "cli.main:cli"
