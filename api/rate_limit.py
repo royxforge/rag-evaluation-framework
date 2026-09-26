@@ -12,6 +12,21 @@ REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 # In-memory fallback when Redis is unavailable
 _in_memory_rates: dict[str, list[float]] = {}
 
+# Shared client. Creating (and abandoning) a connection per request leaked
+# sockets under load; the client is created once and re-created only if the
+# connection drops.
+_redis_client = None
+
+
+def _get_redis():
+    """Return a process-wide Redis client, creating it on first use."""
+    global _redis_client
+    if _redis_client is None:
+        import redis.asyncio as aioredis
+
+        _redis_client = aioredis.from_url(REDIS_URL, decode_responses=True)
+    return _redis_client
+
 
 async def check_rate_limit(
     api_key_id: str,
@@ -24,13 +39,20 @@ async def check_rate_limit(
 
     Raises HTTPException 429 if rate limit exceeded.
     """
+    global _redis_client
     try:
-        import redis.asyncio as aioredis
+        import redis.exceptions  # noqa: F401  (ensures the package is importable)
 
-        r = aioredis.from_url(REDIS_URL, decode_responses=True)
-        await r.ping()
+        r = _get_redis()
         await _check_redis_rate_limit(r, api_key_id, max_requests, window_seconds)
+    except HTTPException:
+        # A genuine rate-limit rejection from Redis must propagate; catching
+        # it would silently ignore the Redis limit.
+        raise
     except Exception:
+        # Connection problem: drop the shared client so the next request
+        # reconnects, and enforce locally until Redis recovers.
+        _redis_client = None
         _check_memory_rate_limit(api_key_id, max_requests, window_seconds)
 
 

@@ -22,6 +22,10 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
+# Imported for KEY_PREFIX_LENGTH; api.auth only imports api.database lazily
+# inside functions, so this is not a circular import.
+from api.auth import KEY_PREFIX_LENGTH
+
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
     "postgresql+asyncpg://rag_evaluation_framework_user:rag_evaluation_framework_pass@localhost/rag_evaluation_framework_db",
@@ -40,6 +44,10 @@ class APIKey(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     key_hash = Column(String(60), nullable=False)
+    # Deterministic leading characters of the raw key, used for indexed
+    # lookup (see api.auth.api_key_prefix). Nullable only for rows created
+    # before migration 002; those keys must be rotated.
+    key_prefix = Column(String(KEY_PREFIX_LENGTH), nullable=True, index=True)
     name = Column(String(100), nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     last_used_at = Column(DateTime(timezone=True), nullable=True)

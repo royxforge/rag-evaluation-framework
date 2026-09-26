@@ -55,7 +55,7 @@ async def score_faithfulness(
         verify_prompt = FAITHFULNESS_VERIFY_PROMPT.format(context=context_str, claim=claim)
         try:
             verify_response = await adapter.complete(verify_prompt, temperature=0.0)
-            is_supported = "SUPPORTED" in verify_response.strip().upper()
+            is_supported = _is_supported_verdict(verify_response)
         except Exception:
             is_supported = False
 
@@ -96,6 +96,19 @@ async def score_faithfulness(
         confidence=confidence,
         details=details,
     )
+
+
+def _is_supported_verdict(text: str) -> bool:
+    """Return True only for an explicit SUPPORTED verdict.
+
+    A bare ``in`` check matches ``NOT_SUPPORTED`` too (it contains the
+    substring ``SUPPORTED``). Require the verdict token at a word boundary
+    and reject an explicit NOT_SUPPORTED verdict first.
+    """
+    upper = text.strip().upper()
+    if re.search(r"\bNOT[_\s-]*SUPPORTED\b", upper):
+        return False
+    return re.search(r"^\s*SUPPORTED\b", upper) is not None
 
 
 def _parse_json_list(text: str) -> list[str]:

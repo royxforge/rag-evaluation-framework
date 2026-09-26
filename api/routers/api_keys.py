@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.auth import generate_api_key, hash_api_key
+from api.auth import api_key_prefix, generate_api_key, hash_api_key
 from api.database import APIKey, get_db
 from api.deps import get_api_key
 
@@ -48,6 +48,7 @@ async def create_api_key(
 
     api_key = APIKey(
         key_hash=key_hash,
+        key_prefix=api_key_prefix(plain_key),
         name=name.strip(),
         rate_limit_per_hour=rate_limit,
     )

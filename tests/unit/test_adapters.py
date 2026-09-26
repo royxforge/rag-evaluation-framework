@@ -91,17 +91,18 @@ class TestMockLLMAdapter:
         assert result.shape == (2, 384)
 
     def test_get_embedder(self):
-        """MockLLMAdapter.get_embedder returns a SentenceTransformer."""
+        """MockLLMAdapter.get_embedder raises a clear error when optional deps are missing."""
         adapter = MockLLMAdapter()
-        embedder = adapter.get_embedder()
-        assert embedder is not None
+        with pytest.raises(ImportError, match="sentence-transformers"):
+            adapter.get_embedder()
 
     def test_get_embedder_singleton(self):
-        """MockLLMAdapter caches embedder instance."""
+        """Repeated get_embedder calls raise the same clear ImportError without the optional dep."""
         adapter = MockLLMAdapter()
-        e1 = adapter.get_embedder()
-        e2 = adapter.get_embedder()
-        assert e1 is e2
+        with pytest.raises(ImportError, match="sentence-transformers"):
+            adapter.get_embedder()
+        with pytest.raises(ImportError, match="sentence-transformers"):
+            adapter.get_embedder()
 
 
 class TestLLMAdapterBase:
@@ -133,6 +134,43 @@ class TestLLMAdapterBase:
         adapter = MockLLMAdapter()
         result = await adapter.embed("test")
         assert isinstance(result, np.ndarray)
+
+
+class TestRetryPolicy:
+    """_retry_with_backoff must retry transient failures only."""
+
+    class _TransientError(Exception):
+        status_code = 429
+
+    class _AuthError(Exception):
+        status_code = 401
+
+    @pytest.mark.asyncio
+    async def test_transient_error_is_retried(self):
+        adapter = MockLLMAdapter(base_delay=0.0)
+        calls = {"n": 0}
+
+        async def flaky():
+            calls["n"] += 1
+            if calls["n"] < 2:
+                raise self._TransientError("rate limited")
+            return "ok"
+
+        assert await adapter._retry_with_backoff(flaky) == "ok"
+        assert calls["n"] == 2
+
+    @pytest.mark.asyncio
+    async def test_auth_error_fails_fast(self):
+        adapter = MockLLMAdapter(base_delay=0.0)
+        calls = {"n": 0}
+
+        async def unauthorized():
+            calls["n"] += 1
+            raise self._AuthError("bad key")
+
+        with pytest.raises(self._AuthError):
+            await adapter._retry_with_backoff(unauthorized)
+        assert calls["n"] == 1  # no retry burn on a 401
 
 
 class TestOpenAIAdapter:

@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Security
+
+- **`SECRET_KEY` is required**: importing `api.auth` without it raises `RuntimeError`. Previously a per-process random default silently invalidated every issued JWT on restart and could not be shared across API/worker processes. Generate one with `openssl rand -hex 32` (deployment `setup.sh` already writes it to `.env`).
+- **Indexed API-key authentication**: new `api_keys.key_prefix` column (first 12 characters of the raw key) plus Alembic migration `002_add_api_key_prefix` give an indexed lookup and a single bcrypt verification per request. Previously every active key row was bcrypt-verified on every unauthenticated request — an O(N) CPU amplifier. **Breaking: keys created before migration 002 have `key_prefix NULL` and will fail authentication; rotate them (`POST /v1/keys`) after upgrading.**
+
+### Fixed
+
+- **Rate limiting** reuses a process-wide Redis client (previously created and abandoned one connection per request, leaking sockets under load) and re-raises HTTP 429 instead of swallowing it into the in-memory fallback.
+- **Cache keys include the resolved metric set** (plus scoring options): a single-metric result can no longer satisfy an "all metrics" lookup (or vice versa).
+- **`overall_score` averages only the metrics that were computed** — a perfect single-metric run no longer divides by 6 (yielding ~0.16). `compare()` inverts `hallucination_rate` deltas, so a positive delta always means "B improved".
+- **Faithfulness verdict parsing** requires an explicit leading `SUPPORTED` and rejects `NOT_SUPPORTED` (the previous substring check matched both, since `NOT_SUPPORTED` contains `SUPPORTED`).
+- **`sentence-transformers` is imported lazily** (LLM-only evaluations no longer pull the torch stack at import time); `embed()` runs in an executor; `complete_batch` bounds concurrency with a semaphore; retries apply only to transient failures (429/5xx/timeout/connection) — authentication errors now fail fast instead of being retried with backoff.
+
+---
+
 ## [0.3.0] - 2026-07-20
 
 ### Changed

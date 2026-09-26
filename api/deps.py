@@ -4,11 +4,10 @@ from __future__ import annotations
 
 from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.auth import decode_access_token, verify_api_key
-from api.database import APIKey, get_db
+from api.auth import api_key_prefix, decode_access_token, get_api_keys_by_prefix, verify_api_key
+from api.database import get_db
 from api.rate_limit import check_rate_limit
 
 security = HTTPBearer()
@@ -26,12 +25,13 @@ async def get_api_key(
     token = credentials.credentials
 
     if token.startswith("reval_"):
-        # API key auth: bcrypt hashing is non-deterministic, so we must
-        # fetch all active keys and verify the plaintext key against each hash.
-        result = await db.execute(select(APIKey).where(APIKey.is_active.is_(True)))
-        api_keys = result.scalars().all()
+        # API key auth. bcrypt hashing is non-deterministic, so the stored
+        # key_prefix gives an indexed candidate set; only those rows are
+        # bcrypt-verified (previously every active row was verified per
+        # request, an unauthenticated O(N) bcrypt amplifier).
+        candidates = await get_api_keys_by_prefix(db, api_key_prefix(token))
 
-        for api_key in api_keys:
+        for api_key in candidates:
             if verify_api_key(token, api_key.key_hash):
                 return {
                     "id": str(api_key.id),

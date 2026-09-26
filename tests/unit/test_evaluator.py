@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from rag_evaluation_framework import Evaluator
+from rag_evaluation_framework.metrics import METRIC_REGISTRY
 from rag_evaluation_framework.models import ComparisonReport, EvalResult
 
 
@@ -95,8 +96,32 @@ def test_evaluator_compare():
     assert comparison.verdict != ""
 
 
-def test_evaluator_cache():
-    """Evaluator should cache identical requests."""
+def test_evaluator_cache_is_metric_aware():
+    """Cache keys include the metric set: subset results never satisfy full lookups."""
+    evaluator = Evaluator(llm="openai/gpt-4o", cache=True, model_config={"api_key": "test"})
+    from tests.conftest import MockLLMAdapter
+
+    evaluator._adapter = MockLLMAdapter()
+    kwargs = dict(
+        question="Cache test?",
+        context=["Cache context."],
+        answer="Cache answer.",
+    )
+
+    full = evaluator.score(**kwargs)
+    assert set(full.metadata["metrics_computed"]) == set(METRIC_REGISTRY.keys())
+
+    subset = evaluator.score(metrics=["faithfulness"], **kwargs)
+    assert subset.metadata["metrics_computed"] == ["faithfulness"]
+    # A perfect single-metric run averages over 1 metric, not 6.
+    assert subset.overall_score == pytest.approx(subset.faithfulness.score)
+
+    again = evaluator.score(**kwargs)
+    assert again.id == full.id  # full result still cached under its own key
+
+
+def test_evaluator_cache_identical_requests_hit():
+    """Identical requests with the same metric set hit the cache."""
     evaluator = Evaluator(llm="openai/gpt-4o", cache=True, model_config={"api_key": "test"})
     from tests.conftest import MockLLMAdapter
 

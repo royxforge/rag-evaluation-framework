@@ -98,14 +98,9 @@ class Evaluator:
         """
         metrics = metrics or ["all"]
 
-        # Check cache
-        cache_key = generate_cache_key(question, context, answer, self._llm_string)
-        if self._cache_enabled and cache_key in self._cache:
-            return self._cache[cache_key]
-
-        start_time = time.time()
-
-        # Determine which metrics to run
+        # Determine which metrics to run first so the cache key can include
+        # the resolved set: a single-metric result must never satisfy an
+        # "all metrics" lookup (or vice versa).
         if "all" in metrics:
             metric_names = list(METRIC_REGISTRY.keys())
         else:
@@ -115,6 +110,16 @@ class Evaluator:
             raise ValueError(
                 f"No valid metrics specified. Available: {list(METRIC_REGISTRY.keys())}"
             )
+
+        # Check cache (key includes metric set + scoring options)
+        extra_opts = {k: v for k, v in kwargs.items() if k != "cache_backend"}
+        cache_key = generate_cache_key(
+            question, context, answer, self._llm_string, metrics=metric_names, extra=extra_opts or None
+        )
+        if self._cache_enabled and cache_key in self._cache:
+            return self._cache[cache_key]
+
+        start_time = time.time()
 
         # Run all selected metrics in parallel
         tasks = {}
@@ -145,16 +150,23 @@ class Evaluator:
         context_coverage = metric_scores.get("context_coverage", MetricScore(score=0.0))
         ucm_confidence = metric_scores.get("ucm_confidence", MetricScore(score=0.0))
 
-        # Overall score: weighted average with hallucination rate inverted
-        scores_for_overall = [
-            faithfulness.score,
-            1.0 - hallucination.score,  # Invert: lower hallucination = better
-            retrieval_precision.score,
-            answer_relevance.score,
-            context_coverage.score,
-            ucm_confidence.score,
-        ]
-        overall = clamp_score(sum(scores_for_overall) / len(scores_for_overall))
+        # Overall score: average over the metrics actually computed, so a
+        # single-metric evaluation does not divide by 6 (yielding ~0.16 for a
+        # perfect score). Hallucination is inverted: lower rate = better.
+        computed: list[float] = []
+        if "faithfulness" in metric_scores:
+            computed.append(faithfulness.score)
+        if "hallucination" in metric_scores:
+            computed.append(1.0 - hallucination.score)
+        if "retrieval_precision" in metric_scores:
+            computed.append(retrieval_precision.score)
+        if "answer_relevance" in metric_scores:
+            computed.append(answer_relevance.score)
+        if "context_coverage" in metric_scores:
+            computed.append(context_coverage.score)
+        if "ucm_confidence" in metric_scores:
+            computed.append(ucm_confidence.score)
+        overall = clamp_score(sum(computed) / len(computed)) if computed else 0.0
 
         latency_ms = int((time.time() - start_time) * 1000)
 
@@ -242,6 +254,10 @@ class Evaluator:
             val_b = getattr(result_b, attr)
             if isinstance(val_a, MetricScore):
                 delta = val_b.score - val_a.score
+                # Hallucination rate is lower-is-better: invert so that a
+                # positive delta always means "B improved".
+                if attr == "hallucination_rate":
+                    delta = -delta
             else:
                 delta = float(val_b) - float(val_a)
             score_deltas[label] = round(delta, 4)

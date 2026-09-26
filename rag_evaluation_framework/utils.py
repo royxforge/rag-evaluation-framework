@@ -121,10 +121,29 @@ def jaccard_similarity(set_a: set[Any], set_b: set[Any]) -> float:
     return intersection / union
 
 
-def generate_cache_key(question: str, context: list[str], answer: str, llm: str) -> str:
-    """Generate a deterministic cache key for an evaluation."""
-    raw = json.dumps(
-        {"question": question, "context": sorted(context), "answer": answer, "llm": llm},
-        sort_keys=True,
-    )
+def generate_cache_key(
+    question: str,
+    context: list[str],
+    answer: str,
+    llm: str,
+    metrics: list[str] | None = None,
+    extra: dict[str, Any] | None = None,
+) -> str:
+    """Generate a deterministic cache key for an evaluation.
+
+    The key includes the resolved metric set (and any extra scoring
+    options) so a ``score(metrics=["faithfulness"])`` result can never be
+    returned for a later ``score(metrics=["all"])`` call on the same text.
+    """
+    payload: dict[str, Any] = {
+        "question": question,
+        "context": sorted(context),
+        "answer": answer,
+        "llm": llm,
+    }
+    if metrics is not None:
+        payload["metrics"] = sorted(metrics)
+    if extra:
+        payload["extra"] = extra
+    raw = json.dumps(payload, sort_keys=True, default=str)
     return hashlib.sha256(raw.encode()).hexdigest()
