@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rag-evaluation-framework"
-version = "0.3.0"
+version = "0.4.0""
 description = "Production-grade RAG evaluation framework"
 readme = "README.md"
 license = { text = "Apache-2.0" }
@@ -74,7 +74,7 @@ line-length = 100
 select = ["E", "F", "I", "N", "W"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "0.4.0""
 strict = false
 ignore_missing_imports = true
 disallow_untyped_defs = false

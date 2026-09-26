@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-09-26
+
 ### Security
 
 - **`SECRET_KEY` is required**: importing `api.auth` without it raises `RuntimeError`. Previously a per-process random default silently invalidated every issued JWT on restart and could not be shared across API/worker processes. Generate one with `openssl rand -hex 32` (deployment `setup.sh` already writes it to `.env`).
@@ -34,6 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 ## [Unreleased]
+
+## [0.4.0] - 2026-09-26
 
 ### Changed
 
