@@ -697,9 +697,10 @@ def run_all() -> dict:
         print(f" {v['description']:<40} {v['mean_ms']:>8.3f} ms \u00d7{v['iterations']} iters")
 
     # Summary timeline
-    print(f"\n{'\u2550' * 70}")
+    bar = "\u2550" * 70
+    print(f"\n{bar}")
     print(" BENCHMARK COMPLETE")
-    print(f"{'\u2550' * 70}\n")
+    print(f"{bar}\n")
 
     return results
 

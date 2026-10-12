@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Packaging metadata**: `pyproject.toml` had a malformed `version = "0.4.0""` line (stray quote) and `[tool.mypy] python_version` had been overwritten with the package version; both are corrected so the file parses.
+- **Python 3.11 compatibility**: `benchmarks/run_benchmarks.py` built f-strings containing backslash escapes (`\u2550`) inside the expression, a syntax error before Python 3.12; the separator is computed once outside the f-string.
+- **Version consistency**: `rag_evaluation_framework.__version__` and the API `FastAPI(version=...)` reported `0.1.0` instead of the released `0.4.0`.
+
 ## [0.4.0] - 2026-09-26
 
 ### Security
