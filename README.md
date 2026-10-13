@@ -5,7 +5,7 @@
 <p align="left">
   <!-- <img src="https://img.shields.io/pypi/v/rag-evaluation-framework?style=flat-square&color=blue" alt="PyPI" /> -->
   <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?style=flat-square&logo=python&logoColor=white" />
-  <img src="https://img.shields.io/badge/Tests-57%20passing-brightgreen?style=flat-square" />
+  <img src="https://img.shields.io/badge/Tests-67%20passing-brightgreen?style=flat-square" />
   <img src="https://img.shields.io/badge/Benchmarks-passing-brightgreen?style=flat-square" />
   <img src="https://img.shields.io/badge/License-Apache%202.0-6366f1?style=flat-square" />
 </p>
@@ -421,6 +421,26 @@ for metric, delta in comparison.score_deltas.items():
 
 Use cases: compare chunking strategies, LLM providers, prompt templates, retrieval pipelines.
 
+### Regression Gate in CI
+
+`compare` also runs from the CLI over two stored results, where result A is the
+baseline. Pass `--fail-on-regression` with a tolerance on the 0-1 metric scale and
+the command exits `1` when any metric moves further than that in the wrong
+direction:
+
+```bash
+# Print the metric delta table only (always exits 0)
+rag-evaluation-framework compare --id-a <baseline-uuid> --id-b <candidate-uuid>
+
+# Fail the pipeline when any metric regresses by more than 0.05
+rag-evaluation-framework compare   --id-a <baseline-uuid> --id-b <candidate-uuid>   --fail-on-regression 0.05
+```
+
+The check is direction-aware: `Overall`, `Faithfulness`, `Retrieval Precision`,
+`Answer Relevance`, `Context Coverage`, and `UCM Confidence` must not fall, while
+`Hallucination Rate` must not rise (a lower rate is better). Regression output
+names each offending metric and its point change.
+
 ---
 
 ## Report Generation
@@ -459,6 +479,9 @@ rag-evaluation-framework batch \
   --file evals.jsonl \
   --llm openai/gpt-4o \
   --output results.jsonl
+
+# Compare two stored results, failing CI on a regression
+rag-evaluation-framework compare --id-a <baseline-uuid> --id-b <candidate-uuid>   --fail-on-regression 0.05
 
 # Start REST API server
 rag-evaluation-framework serve --port 8000 --host 0.0.0.0

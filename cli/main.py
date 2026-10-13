@@ -26,6 +26,41 @@ from rag_evaluation_framework import Evaluator
 
 console = Console()
 
+# Metrics where a higher score means better quality. `Hallucination Rate` is
+# the exception: its score is the rate itself (0.0 = clean, 1.0 = every claim
+# unsupported), so an *increase* is the regression.
+_HIGHER_IS_BETTER = {
+    "Overall",
+    "Faithfulness",
+    "Retrieval Precision",
+    "Answer Relevance",
+    "Context Coverage",
+    "UCM Confidence",
+}
+_LOWER_IS_BETTER = {"Hallucination Rate"}
+
+
+def find_regressions(metrics_to_compare, threshold: float):
+    """Return entries that got worse by more than ``threshold`` points.
+
+    ``metrics_to_compare`` is a sequence of ``(name, score_a, score_b)`` where
+    A is the baseline and B is the candidate. The threshold is expressed on
+    the same 0-1 scale as the metrics, so ``0.05`` means "fail if any metric
+    moved more than 5 points in the wrong direction".
+    """
+    regressed = []
+    for name, score_a, score_b in metrics_to_compare:
+        delta = score_b - score_a
+        if name in _LOWER_IS_BETTER:
+            worse = delta > threshold
+        elif name in _HIGHER_IS_BETTER:
+            worse = delta < -threshold
+        else:  # unknown metric: assume higher is better
+            worse = delta < -threshold
+        if worse:
+            regressed.append((name, score_a, score_b, delta))
+    return regressed
+
 
 @click.group()
 def cli():
@@ -205,8 +240,14 @@ def report(result_id: str, format_type: str, output: str):
 @cli.command()
 @click.option("--id-a", required=True, help="First result UUID")
 @click.option("--id-b", required=True, help="Second result UUID")
-def compare(id_a: str, id_b: str):
-    """Compare two evaluation results side-by-side."""
+@click.option(
+    "--fail-on-regression",
+    type=float,
+    default=None,
+    help="Exit 1 if any metric worsens by more than this many points (0-1 scale).",
+)
+def compare(id_a: str, id_b: str, fail_on_regression: float | None):
+    """Compare two evaluation results side-by-side (A is the baseline)."""
     import httpx
 
     api_url = os.environ.get("RAG_EVALUATION_FRAMEWORK_API_URL", "http://localhost:8000")
@@ -270,6 +311,24 @@ def compare(id_a: str, id_b: str):
             table.add_row(name, f"{score_a:.3f}", f"{score_b:.3f}", delta_str)
 
         console.print(table)
+
+        if fail_on_regression is not None:
+            regressed = find_regressions(metrics_to_compare, fail_on_regression)
+            if regressed:
+                for name, score_a, score_b, delta in regressed:
+                    console.print(
+                        f"[red]REGRESSION[/red] {name}: "
+                        f"{score_a:.3f} -> {score_b:.3f} ({delta:+.3f})"
+                    )
+                console.print(
+                    f"[red]{len(regressed)} metric(s) regressed by more than "
+                    f"{fail_on_regression:.3f}[/red]"
+                )
+                sys.exit(1)
+            console.print(
+                f"[green]OK[/green] no metric regressed by more than "
+                f"{fail_on_regression:.3f}"
+            )
     except Exception as e:
         console.print(f"[red]Error:[/red] {e}")
         sys.exit(1)

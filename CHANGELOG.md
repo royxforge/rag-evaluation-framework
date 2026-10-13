@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-13
+
+### Added
+
+- **Regression gate for `compare`**: `compare` printed a metric-by-metric delta table but always exited `0`, so a configuration that swapped faithfulness for hallucination looked identical to a no-op in CI. `compare` now accepts `--fail-on-regression <threshold>` (on the same 0-1 scale as the metrics, e.g. `0.05` for five points) and exits `1` when any metric worsens by more than the threshold, printing the offending metrics. The check is direction-aware: `Hallucination Rate` is a rate where lower is better, so an *increase* is the regression - the naive "higher is better" comparison would have passed a run that got worse. Without the flag the command keeps its old behaviour (print the table, exit `0`).
+
 ### Fixed
 
 - **Packaging metadata**: `pyproject.toml` had a malformed `version = "0.4.0""` line (stray quote) and `[tool.mypy] python_version` had been overwritten with the package version; both are corrected so the file parses.
