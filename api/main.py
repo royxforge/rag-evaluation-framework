@@ -41,7 +41,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="RAG Evaluation Framework API",
         description="Production-grade RAG evaluation API",
-        version="0.4.0",
+        version="0.5.0",
         lifespan=lifespan,
         docs_url="/docs" if os.environ.get("DEBUG", "").lower() == "true" else None,
         redoc_url=None,
@@ -107,7 +107,7 @@ def create_app() -> FastAPI:
 
         return {
             "status": "ok" if db_status == "ok" and redis_status == "ok" else "degraded",
-            "version": "0.1.0",
+            "version": "0.5.0",
             "database": db_status,
             "redis": redis_status,
         }
