@@ -96,14 +96,16 @@ class LLMAdapter(ABC):
         # Import defensively: provider SDKs are optional extras, and a
         # missing package must not break retry policy for the providers that
         # *are* installed.
+        httpx_mod: Any
         try:
-            import httpx
+            import httpx as httpx_mod
         except ImportError:  # pragma: no cover - httpx is a declared dependency
-            httpx = None
+            httpx_mod = None
+        openai_mod: Any
         try:
-            import openai
+            import openai as openai_mod
         except ImportError:
-            openai = None
+            openai_mod = None
 
         retries = retries or self._max_retries
         last_exception: Exception | None = None
@@ -112,7 +114,7 @@ class LLMAdapter(ABC):
                 return await coro_factory()
             except Exception as e:
                 last_exception = e
-                if not _is_transient_error(e, httpx=httpx, openai=openai):
+                if not _is_transient_error(e, httpx=httpx_mod, openai=openai_mod):
                     raise
                 if attempt < retries:
                     delay = self._base_delay * (2**attempt)

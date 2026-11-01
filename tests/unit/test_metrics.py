@@ -92,7 +92,10 @@ async def test_answer_relevance():
         answer="The capital of France is Paris.",
         adapter=adapter,
     )
-    assert 0.0 <= result.score <= 1.0
+    # The mock's default reply contains no number: an unparseable grading
+    # response is a failed measurement, not a mid-range score.
+    assert result.score is None
+    assert result.details.get("failed") is True
 
 
 @pytest.mark.asyncio
@@ -105,7 +108,9 @@ async def test_context_coverage():
         answer="The capital of France is Paris.",
         adapter=adapter,
     )
-    assert 0.0 <= result.score <= 1.0
+    # Same contract as answer relevance: no parseable score means no score.
+    assert result.score is None
+    assert result.details.get("failed") is True
 
 
 @pytest.mark.asyncio

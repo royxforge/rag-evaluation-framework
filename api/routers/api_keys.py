@@ -90,7 +90,9 @@ async def revoke_api_key(
             detail="API key not found",
         )
 
-    api_key.is_active = False
+    # SQLAlchemy instruments the attribute as ``Column[bool]``; assigning a
+    # plain bool is correct at runtime and is what the ORM expects.
+    api_key.is_active = False  # type: ignore[assignment]
     await db.commit()
 
     return {"status": "revoked", "id": key_id}

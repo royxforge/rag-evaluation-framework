@@ -32,15 +32,25 @@ export default function EvaluatePage() {
     setLoading(isLoading);
   };
 
+  // Failed metrics have a null score; drop them from the radar rather than
+  // plotting NaN and visually implying a zero score.
   const radarData = result
     ? [
-        { metric: "Faithfulness", score: result.faithfulness.score * 100 },
-        { metric: "Hallucination", score: (1 - result.hallucination_rate.score) * 100 },
-        { metric: "Retrieval", score: result.retrieval_precision.score * 100 },
-        { metric: "Relevance", score: result.answer_relevance.score * 100 },
-        { metric: "Coverage", score: result.context_coverage.score * 100 },
-        { metric: "UCM", score: result.ucm_confidence.score * 100 },
+        { metric: "Faithfulness", score: result.faithfulness.score },
+        {
+          metric: "Hallucination",
+          score:
+            result.hallucination_rate.score === null
+              ? null
+              : 1 - result.hallucination_rate.score,
+        },
+        { metric: "Retrieval", score: result.retrieval_precision.score },
+        { metric: "Relevance", score: result.answer_relevance.score },
+        { metric: "Coverage", score: result.context_coverage.score },
+        { metric: "UCM", score: result.ucm_confidence.score },
       ]
+        .filter((d): d is { metric: string; score: number } => d.score !== null)
+        .map((d) => ({ metric: d.metric, score: d.score * 100 }))
     : [];
 
   return (

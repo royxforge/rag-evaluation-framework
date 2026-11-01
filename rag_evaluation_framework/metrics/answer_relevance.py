@@ -34,8 +34,22 @@ async def score_answer_relevance(
     try:
         response = await adapter.complete(prompt, temperature=0.0)
         score = _parse_score(response)
-    except Exception:
-        score = 0.5
+    except Exception as exc:
+        # Never substitute a plausible number for a failed measurement.
+        return MetricScore(
+            score=None,
+            explanation=f"Answer relevance could not be computed: {exc}",
+            confidence=0.0,
+            details={"error": str(exc), "failed": True},
+        )
+
+    if score is None:
+        return MetricScore(
+            score=None,
+            explanation="Answer relevance could not be computed: unparseable model response.",
+            confidence=0.0,
+            details={"error": "unparseable_score", "failed": True},
+        )
 
     score = clamp_score(score)
 
@@ -55,8 +69,8 @@ async def score_answer_relevance(
     return MetricScore(score=score, explanation=explanation, confidence=0.8, details=details)
 
 
-def _parse_score(text: str) -> float:
-    """Parse a float score from LLM response."""
+def _parse_score(text: str) -> float | None:
+    """Parse a float score from LLM response, or None if it cannot be parsed."""
     text = text.strip()
     try:
         return float(text)
@@ -74,4 +88,4 @@ def _parse_score(text: str) -> float:
         except ValueError:
             pass
 
-    return 0.5
+    return None

@@ -25,13 +25,16 @@ class AnthropicAdapter(LLMAdapter):
 
     async def complete(self, prompt: str, temperature: float = 0.0, **kwargs: Any) -> str:
         async def _call() -> str:
-            response = await self._client.messages.create(
-                model=self.model,
-                max_tokens=kwargs.pop("max_tokens", 4096),
-                messages=[{"role": "user", "content": prompt}],
-                temperature=temperature,
+            # Passed as a mapping so SDK overload resolution is not pinned to a
+            # single signature, and extra provider kwargs stay supported.
+            params: dict[str, Any] = {
+                "model": self.model,
+                "max_tokens": kwargs.pop("max_tokens", 4096),
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": temperature,
                 **kwargs,
-            )
+            }
+            response = await self._client.messages.create(**params)
             return response.content[0].text if response.content else ""
 
         return await self._retry_with_backoff(_call)

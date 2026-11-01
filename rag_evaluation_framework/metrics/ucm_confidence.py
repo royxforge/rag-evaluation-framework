@@ -72,8 +72,15 @@ Answer the question concisely using only the information from the context."""
             temperature=temperature,
         )
         samples.extend(additional_samples)
-    except Exception:
-        pass
+    except Exception as exc:
+        # Without additional samples there is no consistency signal to measure;
+        # returning a score here would report confidence that was never computed.
+        return MetricScore(
+            score=None,
+            explanation=f"UCM confidence could not be computed: {exc}",
+            confidence=0.0,
+            details={"error": str(exc), "failed": True},
+        )
 
     # Deduplicate and filter empty samples
     samples = list(dict.fromkeys(s for s in samples if s.strip()))

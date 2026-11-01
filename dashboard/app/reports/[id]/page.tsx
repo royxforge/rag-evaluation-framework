@@ -128,8 +128,12 @@ export default function ReportPage() {
         <h2 className="text-lg font-semibold">Metrics</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {metrics.map(({ name, data, invert }) => {
-            const effectiveScore = invert ? 1 - data.score : data.score;
+            // A null score means the metric failed to compute; show n/a and
+            // leave the bar empty instead of painting it red as a 0% score.
+            const effectiveScore =
+              data.score === null ? null : invert ? 1 - data.score : data.score;
             const colorClass =
+              effectiveScore === null ? "" :
               effectiveScore >= 0.8 ? "score-green" :
               effectiveScore >= 0.6 ? "score-amber" : "score-red";
 
@@ -138,7 +142,7 @@ export default function ReportPage() {
                 <div className="flex items-start justify-between mb-3">
                   <h3 className="font-medium text-sm">{name}</h3>
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colorClass}`}>
-                    {(effectiveScore * 100).toFixed(0)}%
+                    {effectiveScore === null ? "n/a" : `${(effectiveScore * 100).toFixed(0)}%`}
                   </span>
                 </div>
 
@@ -146,10 +150,11 @@ export default function ReportPage() {
                 <div className="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden mb-3">
                   <div
                     className={`h-full rounded-full transition-all ${
+                      effectiveScore === null ? "bg-slate-400 dark:bg-slate-600" :
                       effectiveScore >= 0.8 ? "bg-emerald-500" :
                       effectiveScore >= 0.6 ? "bg-amber-500" : "bg-red-500"
                     }`}
-                    style={{ width: `${(effectiveScore * 100).toFixed(0)}%` }}
+                    style={{ width: `${effectiveScore === null ? 0 : (effectiveScore * 100).toFixed(0)}%` }}
                   />
                 </div>
 

@@ -49,13 +49,30 @@ async def score_hallucination(
     factual_hallucinations = []
     claim_details = []
 
+    unverified_claims: list[str] = []
+
     for claim in claims:
         verify_prompt = HALLUCINATION_VERIFY_PROMPT.format(context=context_str, claim=claim)
         try:
             verify_response = await adapter.complete(verify_prompt, temperature=0.0)
-            result = _parse_verification(verify_response)
+            result: dict[str, Any] | None = _parse_verification(verify_response)
         except Exception:
-            result = {"grounded": False, "factual": True, "reason": "Verification failed"}
+            # An unverifiable claim is unknown, not hallucinated. Treating it as
+            # a factual hallucination inflates the rate on provider errors.
+            result = None
+
+        if result is None:
+            unverified_claims.append(claim)
+            claim_details.append(
+                {
+                    "claim": claim,
+                    "grounded": None,
+                    "factual": None,
+                    "hallucination_type": "unknown",
+                    "reason": "Verification failed",
+                }
+            )
+            continue
 
         is_grounded = result.get("grounded", False)
         is_factual = result.get("factual", False)
@@ -82,9 +99,21 @@ async def score_hallucination(
             }
         )
 
-    total = len(claims)
+    total = len(supported_claims) + len(context_hallucinations) + len(factual_hallucinations)
+    if total == 0:
+        return MetricScore(
+            score=None,
+            explanation="Hallucination rate could not be computed: no claim could be verified.",
+            confidence=0.0,
+            details={
+                "failed": True,
+                "claims": claim_details,
+                "unverified_claims": len(unverified_claims),
+            },
+        )
+
     total_hallucinations = len(context_hallucinations) + len(factual_hallucinations)
-    rate = clamp_score(total_hallucinations / total) if total > 0 else 0.0
+    rate = clamp_score(total_hallucinations / total)
 
     explanation_parts = []
     if total_hallucinations == 0:
@@ -107,6 +136,8 @@ async def score_hallucination(
     details = {
         "claims": claim_details,
         "total_claims": total,
+        "unverified_claims": len(unverified_claims),
+        "unverified_list": unverified_claims[:5],
         "supported_claims": len(supported_claims),
         "context_hallucinations": len(context_hallucinations),
         "context_hallucination_list": context_hallucinations[:5],

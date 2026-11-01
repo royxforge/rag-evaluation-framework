@@ -5,12 +5,17 @@
 <p align="left">
   <!-- <img src="https://img.shields.io/pypi/v/rag-evaluation-framework?style=flat-square&color=blue" alt="PyPI" /> -->
   <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?style=flat-square&logo=python&logoColor=white" />
-  <img src="https://img.shields.io/badge/Tests-67%20passing-brightgreen?style=flat-square" />
-  <img src="https://img.shields.io/badge/Benchmarks-passing-brightgreen?style=flat-square" />
+  <a href="https://github.com/royxforge/rag-evaluation-framework/actions/workflows/test.yml"><img src="https://github.com/royxforge/rag-evaluation-framework/actions/workflows/test.yml/badge.svg" alt="Test" /></a>
+  <a href="https://github.com/royxforge/rag-evaluation-framework/actions/workflows/integration.yml"><img src="https://github.com/royxforge/rag-evaluation-framework/actions/workflows/integration.yml/badge.svg" alt="Integration" /></a>
+  <a href="https://royxforge.github.io/rag-evaluation-framework/"><img src="https://img.shields.io/badge/docs-GitHub%20Pages-6366f1?style=flat-square" alt="Docs" /></a>
   <img src="https://img.shields.io/badge/License-Apache%202.0-6366f1?style=flat-square" />
 </p>
 
-> A pip-installable Python library for evaluating Retrieval-Augmented Generation systems across six dimensions: faithfulness, hallucination rate, retrieval precision, answer relevance, context coverage, and UCM - an unsupervised confidence metric that requires no ground-truth labels. Evaluated against OpenAI GPT-4o with 57 passing unit tests and a 9-dimension benchmark suite.
+> **Six RAG metrics in one call — faithfulness, hallucination rate, retrieval precision, answer relevance, context coverage, and UCM, a confidence score that needs no gold-standard labels.** Adapter layer for OpenAI, Anthropic, Ollama or LiteLLM, plus CLI, REST API and a Next.js dashboard, with SHA-256 caching so repeat runs cost nothing.
+>
+> **Result:** on GPT-4o a correct answer scores **0.846** overall, a hallucinated one **0.386**, an off-topic one **0.359** — the separation is the product, not the absolute score.
+>
+> **Try it on CPU, no key:** `python -m benchmarks.run_benchmarks`
 
 > **⚠️ All LLM-as-judge scores depend on the quality of the judge model. Results shown here use GPT-4o. Swap the adapter for different behavior.**
 
@@ -295,7 +300,7 @@ rag-evaluation-framework/
 |
 +-- migrations/                       # Alembic database migrations
 +-- deploy/                           # systemd + Nginx production configs
-+-- tests/                            # 57 unit tests
++-- tests/                            # 67 unit tests (2 skipped without optional deps)
 +-- demo.py                           # Full demo without API keys (MockLLMAdapter)
 +-- rag_pipeline_example.py           # End-to-end RAG integration example
 +-- pyproject.toml
@@ -308,14 +313,16 @@ rag-evaluation-framework/
 ## Installation
 
 ```bash
-# Core library
-pip install rag-evaluation-framework
+# From source - the package is not published on PyPI yet
+git clone https://github.com/royxforge/rag-evaluation-framework.git
+cd rag-evaluation-framework
+pip install -e ".[dev]"
 
 # With REST API server (FastAPI, Celery, PostgreSQL, Redis)
-pip install rag-evaluation-framework[api]
+pip install -e ".[api,dev]"
 
-# Development (testing, linting, building)
-pip install rag-evaluation-framework[dev]
+# Core library only, no dev tooling and no REST API
+pip install -e .
 ```
 
 **Requirements:** Python 3.11+ · sentence-transformers (runs locally) · API key for any supported LLM provider (or MockLLMAdapter for development)
@@ -586,7 +593,7 @@ python -m benchmarks.run_benchmarks
 # Real LLM benchmarks (requires OPENAI_API_KEY)
 python -m benchmarks.run_real_benchmarks
 
-# All 57 unit tests
+# All 67 unit tests
 pytest tests/ -v
 ```
 

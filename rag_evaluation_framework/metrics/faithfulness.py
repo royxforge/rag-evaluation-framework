@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+from typing import Any
 
 from rag_evaluation_framework.adapters.base import LLMAdapter
 from rag_evaluation_framework.models import MetricScore
@@ -47,17 +48,24 @@ async def score_faithfulness(
         )
 
     # Step 2: Verify each claim against context
-    supported_claims = []
-    unsupported_claims = []
-    claim_details = []
+    supported_claims: list[str] = []
+    unsupported_claims: list[str] = []
+    unverified_claims: list[str] = []
+    claim_details: list[dict[str, Any]] = []
 
     for claim in claims:
         verify_prompt = FAITHFULNESS_VERIFY_PROMPT.format(context=context_str, claim=claim)
         try:
             verify_response = await adapter.complete(verify_prompt, temperature=0.0)
-            is_supported = _is_supported_verdict(verify_response)
-        except Exception:
-            is_supported = False
+            is_supported: bool | None = _is_supported_verdict(verify_response)
+        except Exception as exc:
+            # A failed verification is not evidence against the claim. Counting
+            # it as "unsupported" deflates the score whenever the provider
+            # errors, which is the opposite of what the metric measures.
+            is_supported = None
+            claim_details.append({"claim": claim, "supported": None, "error": str(exc)})
+            unverified_claims.append(claim)
+            continue
 
         if is_supported:
             supported_claims.append(claim)
@@ -66,28 +74,47 @@ async def score_faithfulness(
 
         claim_details.append({"claim": claim, "supported": is_supported})
 
-    total = len(claims)
+    total = len(supported_claims) + len(unsupported_claims)
+    if total == 0:
+        return MetricScore(
+            score=None,
+            explanation="Faithfulness could not be computed: no claim could be verified.",
+            confidence=0.0,
+            details={
+                "failed": True,
+                "claims": claim_details,
+                "unverified_claims": len(unverified_claims),
+            },
+        )
+
     supported = len(supported_claims)
-    score = clamp_score(supported / total) if total > 0 else 1.0
+    score = clamp_score(supported / total)
 
     if supported == total:
         detail_msg = "All claims are grounded."
     else:
         detail_msg = f"{total - supported} claim(s) lack support."
+    unverified_msg = (
+        f" {len(unverified_claims)} claim(s) could not be verified and are excluded."
+        if unverified_claims
+        else ""
+    )
     explanation = (
-        f"Faithfulness score {score:.3f}: {supported}/{total} claims supported by context. "
-        f"{detail_msg}"
+        f"Faithfulness score {score:.3f}: {supported}/{total} verified claims supported "
+        f"by context. {detail_msg}{unverified_msg}"
     )
 
     details = {
         "claims": claim_details,
         "supported_claims": supported,
         "total_claims": total,
+        "unverified_claims": len(unverified_claims),
+        "unverified_list": unverified_claims[:5],
         "supported_list": supported_claims[:5],
         "unsupported_list": unsupported_claims[:5],
     }
 
-    # Confidence: higher when we have more claims and clear verdicts
+    # Confidence: higher when we have more verified claims
     confidence = clamp_score(min(1.0, total / 5.0))
 
     return MetricScore(

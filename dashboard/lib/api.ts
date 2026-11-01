@@ -12,7 +12,8 @@ interface EvaluateRequest {
 }
 
 interface MetricScore {
-  score: number;
+  /** null when the metric failed to compute; render as "n/a", not as 0. */
+  score: number | null;
   explanation: string;
   confidence: number;
   details: Record<string, unknown>;

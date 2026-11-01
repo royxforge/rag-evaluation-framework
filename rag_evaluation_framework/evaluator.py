@@ -114,7 +114,12 @@ class Evaluator:
         # Check cache (key includes metric set + scoring options)
         extra_opts = {k: v for k, v in kwargs.items() if k != "cache_backend"}
         cache_key = generate_cache_key(
-            question, context, answer, self._llm_string, metrics=metric_names, extra=extra_opts or None
+            question,
+            context,
+            answer,
+            self._llm_string,
+            metrics=metric_names,
+            extra=extra_opts or None,
         )
         if self._cache_enabled and cache_key in self._cache:
             return self._cache[cache_key]
@@ -132,45 +137,48 @@ class Evaluator:
         # Collect results
         metric_scores: dict[str, MetricScore] = {}
         for name, result in zip(tasks.keys(), results):
-            if isinstance(result, Exception):
+            # ``gather(return_exceptions=True)`` may yield BaseException.
+            if isinstance(result, BaseException):
+                # A failed metric carries no score: `None` keeps it out of the
+                # aggregate instead of contributing a fabricated 0.0.
                 metric_scores[name] = MetricScore(
-                    score=0.0,
+                    score=None,
                     explanation=f"Metric {name} failed: {result}",
                     confidence=0.0,
-                    details={"error": str(result)},
+                    details={"error": str(result), "failed": True},
                 )
             else:
                 metric_scores[name] = result
 
         # Build EvalResult
-        faithfulness = metric_scores.get("faithfulness", MetricScore(score=0.0))
-        hallucination = metric_scores.get("hallucination", MetricScore(score=0.0))
-        retrieval_precision = metric_scores.get("retrieval_precision", MetricScore(score=0.0))
-        answer_relevance = metric_scores.get("answer_relevance", MetricScore(score=0.0))
-        context_coverage = metric_scores.get("context_coverage", MetricScore(score=0.0))
-        ucm_confidence = metric_scores.get("ucm_confidence", MetricScore(score=0.0))
+        faithfulness = metric_scores.get("faithfulness", MetricScore())
+        hallucination = metric_scores.get("hallucination", MetricScore())
+        retrieval_precision = metric_scores.get("retrieval_precision", MetricScore())
+        answer_relevance = metric_scores.get("answer_relevance", MetricScore())
+        context_coverage = metric_scores.get("context_coverage", MetricScore())
+        ucm_confidence = metric_scores.get("ucm_confidence", MetricScore())
 
         # Overall score: average over the metrics actually computed, so a
         # single-metric evaluation does not divide by 6 (yielding ~0.16 for a
         # perfect score). Hallucination is inverted: lower rate = better.
         computed: list[float] = []
-        if "faithfulness" in metric_scores:
+        if "faithfulness" in metric_scores and faithfulness.score is not None:
             computed.append(faithfulness.score)
-        if "hallucination" in metric_scores:
+        if "hallucination" in metric_scores and hallucination.score is not None:
             computed.append(1.0 - hallucination.score)
-        if "retrieval_precision" in metric_scores:
+        if "retrieval_precision" in metric_scores and retrieval_precision.score is not None:
             computed.append(retrieval_precision.score)
-        if "answer_relevance" in metric_scores:
+        if "answer_relevance" in metric_scores and answer_relevance.score is not None:
             computed.append(answer_relevance.score)
-        if "context_coverage" in metric_scores:
+        if "context_coverage" in metric_scores and context_coverage.score is not None:
             computed.append(context_coverage.score)
-        if "ucm_confidence" in metric_scores:
+        if "ucm_confidence" in metric_scores and ucm_confidence.score is not None:
             computed.append(ucm_confidence.score)
         overall = clamp_score(sum(computed) / len(computed)) if computed else 0.0
 
         latency_ms = int((time.time() - start_time) * 1000)
 
-        result = EvalResult(
+        eval_result = EvalResult(
             question=question,
             context=context,
             answer=answer,
@@ -187,9 +195,9 @@ class Evaluator:
 
         # Cache result
         if self._cache_enabled:
-            self._cache[cache_key] = result
+            self._cache[cache_key] = eval_result
 
-        return result
+        return eval_result
 
     def batch_score(
         self,
@@ -253,6 +261,8 @@ class Evaluator:
             val_a = getattr(result_a, attr)
             val_b = getattr(result_b, attr)
             if isinstance(val_a, MetricScore):
+                if val_a.score is None or val_b.score is None:
+                    continue
                 delta = val_b.score - val_a.score
                 # Hallucination rate is lower-is-better: invert so that a
                 # positive delta always means "B improved".

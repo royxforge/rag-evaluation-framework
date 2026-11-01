@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Documentation site**: `.github/workflows/docs.yml` deployed MkDocs Pages but the repository had no `mkdocs.yml` and no `docs/` directory, so the workflow failed on its first step. A minimal Material site now exists (`docs/index.md`, `metrics.md`, `cli.md`) with `mkdocs build --strict` passing; the README remains the primary documentation.
+
+### Fixed
+
+- **`ruff check .` and `mypy` were failing on the tree CI runs them against**: two `ruff` findings (a missing trailing newline in a migration, one 103-character line) and 16 mypy errors are resolved. The typing fixes are behavioural only where noted: `EvalResult.report()` gained `@overload` declarations so a literal format selects the correct return type, the evaluator no longer reuses one variable for both gathered metric results and the final result (and catches `BaseException` from `gather(return_exceptions=True)`, which can yield more than `Exception`), the Anthropic adapter passes provider arguments as a mapping instead of relying on one SDK overload, and optional provider imports are typed `Any` instead of being reassigned to `None` on an imported module name.
+- **Report reconstruction is explicitly typed**: `GET /v1/reports/{id}` rebuilds an `EvalResult` from a row whose metric columns are nullable. Each score now falls back to a default explicitly and the stored `context` is materialised as a list before validation, so the mapping is type-checked instead of relying on SQLAlchemy `Column[...]` values being accepted where `float` and `list[str]` are declared.
+
 ## [0.5.0] - 2026-10-13
 
 ### Added

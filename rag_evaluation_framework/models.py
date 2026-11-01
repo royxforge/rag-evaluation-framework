@@ -4,15 +4,23 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Literal, Optional, overload
 
 from pydantic import BaseModel, Field
 
 
 class MetricScore(BaseModel):
-    """Score for a single evaluation metric."""
+    """Score for a single evaluation metric.
 
-    score: float = Field(..., ge=0.0, le=1.0, description="Score between 0.0 and 1.0")
+    ``score`` is ``None`` when the metric could not be computed (for example a
+    provider outage). A failed metric must never be reported as a plausible
+    numeric value, because such a value is averaged into ``overall_score`` and
+    silently corrupts the aggregate.
+    """
+
+    score: Optional[float] = Field(
+        default=None, ge=0.0, le=1.0, description="Score between 0.0 and 1.0, or None if it failed"
+    )
     explanation: str = Field(default="", description="Human-readable explanation of the score")
     confidence: float = Field(
         default=1.0, ge=0.0, le=1.0, description="Confidence in this metric score"
@@ -29,14 +37,23 @@ class EvalResult(BaseModel):
     context: list[str]
     answer: str
     overall_score: float = Field(default=0.0, ge=0.0, le=1.0)
-    faithfulness: MetricScore = Field(default_factory=lambda: MetricScore(score=0.0))
-    hallucination_rate: MetricScore = Field(default_factory=lambda: MetricScore(score=0.0))
-    retrieval_precision: MetricScore = Field(default_factory=lambda: MetricScore(score=0.0))
-    answer_relevance: MetricScore = Field(default_factory=lambda: MetricScore(score=0.0))
-    context_coverage: MetricScore = Field(default_factory=lambda: MetricScore(score=0.0))
-    ucm_confidence: MetricScore = Field(default_factory=lambda: MetricScore(score=0.0))
+    faithfulness: MetricScore = Field(default_factory=MetricScore)
+    hallucination_rate: MetricScore = Field(default_factory=MetricScore)
+    retrieval_precision: MetricScore = Field(default_factory=MetricScore)
+    answer_relevance: MetricScore = Field(default_factory=MetricScore)
+    context_coverage: MetricScore = Field(default_factory=MetricScore)
+    ucm_confidence: MetricScore = Field(default_factory=MetricScore)
     metadata: dict[str, Any] = Field(default_factory=dict)
     latency_ms: int = Field(default=0)
+
+    @overload
+    def report(self, format: Literal["dict"] = "dict") -> dict: ...
+
+    @overload
+    def report(self, format: Literal["json", "html", "markdown"]) -> str: ...
+
+    @overload
+    def report(self, format: str) -> dict | str: ...
 
     def report(self, format: str = "dict") -> dict | str:
         """Generate a formatted report.
@@ -75,16 +92,13 @@ class EvalResult(BaseModel):
                 ("Context Coverage", self.context_coverage),
                 ("UCM Confidence", self.ucm_confidence),
             ]:
-                if "Hallucination" in label:
-                    lines.append(
-                        f"| {label} | {1 - metric.score:.3f}"
-                        f" | {metric.confidence:.3f} |"
-                    )
+                if metric.score is None:
+                    formatted = "n/a"
+                elif "Hallucination" in label:
+                    formatted = f"{1 - metric.score:.3f}"
                 else:
-                    lines.append(
-                        f"| {label} | {metric.score:.3f}"
-                        f" | {metric.confidence:.3f} |"
-                    )
+                    formatted = f"{metric.score:.3f}"
+                lines.append(f"| {label} | {formatted} | {metric.confidence:.3f} |")
 
             lines.extend([
                 "",
@@ -163,20 +177,25 @@ class EvalResult(BaseModel):
                 ("Context Coverage", self.context_coverage),
                 ("UCM Confidence", self.ucm_confidence),
             ]:
-                badge_class = (
-                    "badge-green"
-                    if metric.score >= 0.8
-                    else "badge-amber"
-                    if metric.score >= 0.6
-                    else "badge-red"
-                )
+                if metric.score is None:
+                    badge_class = "badge-amber"
+                    score_text = "n/a"
+                else:
+                    badge_class = (
+                        "badge-green"
+                        if metric.score >= 0.8
+                        else "badge-amber"
+                        if metric.score >= 0.6
+                        else "badge-red"
+                    )
+                    score_text = f"{metric.score:.3f}"
                 expl = metric.explanation[:80]
                 if len(metric.explanation) > 80:
                     expl += "..."
                 lines.append(
                     f"<tr><td>{name}</td>"
                     f"<td><span class='badge {badge_class}'>"
-                    f"{metric.score:.3f}</span></td>"
+                    f"{score_text}</span></td>"
                     f"<td>{metric.confidence:.2f}</td>"
                     f"<td>{expl}</td></tr>"
                 )
@@ -229,7 +248,7 @@ class ComparisonReport(BaseModel):
 class MetricScoreResponse(BaseModel):
     """API response wrapper for a metric score."""
 
-    score: float
+    score: Optional[float] = None
     explanation: str
     confidence: float
     details: dict[str, Any]

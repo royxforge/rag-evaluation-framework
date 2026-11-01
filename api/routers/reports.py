@@ -88,39 +88,58 @@ async def get_report(
             detail="Result not found",
         )
 
-    # Reconstruct EvalResult
+    def _col(value, fallback):
+        return value if value is not None else fallback
+
+    faithfulness = MetricScore(
+        score=_col(db_row.faithfulness_score, 0.0),
+        details=_col(db_row.faithfulness_details, {}),
+    )
+    hallucination_rate = MetricScore(
+        score=_col(db_row.hallucination_rate, 0.0),
+        details=_col(db_row.hallucination_details, {}),
+    )
+    retrieval_precision = MetricScore(
+        score=_col(db_row.retrieval_precision, 0.0),
+        details=_col(db_row.retrieval_details, {}),
+    )
+    answer_relevance = MetricScore(
+        score=_col(db_row.answer_relevance, 0.0),
+        details=_col(db_row.relevance_details, {}),
+    )
+    context_coverage = MetricScore(
+        score=_col(db_row.context_coverage, 0.0),
+        details=_col(db_row.coverage_details, {}),
+    )
+    ucm_confidence = MetricScore(
+        score=_col(db_row.ucm_score, 0.0),
+        details=_col(db_row.ucm_details, {}),
+    )
+    def _v(value, default=None):
+        return value if value is not None else default
+
+    _id = str(db_row.id)
+    _question = _v(db_row.question, "")
+    _answer = _v(db_row.answer, "")
+    _overall_score = _v(db_row.overall_score, 0.0)
+    _metadata = _v(db_row.extra_metadata, {})
+    _latency_ms = _v(db_row.latency_ms, 0)
+    _context = _v(db_row.context, [])
+
     eval_result = EvalResult(
-        id=str(db_row.id),
-        question=db_row.question,
-        context=db_row.context or [],
-        answer=db_row.answer,
-        overall_score=db_row.overall_score,
-        faithfulness=MetricScore(
-            score=db_row.faithfulness_score or 0.0,
-            details=db_row.faithfulness_details or {},
-        ),
-        hallucination_rate=MetricScore(
-            score=db_row.hallucination_rate or 0.0,
-            details=db_row.hallucination_details or {},
-        ),
-        retrieval_precision=MetricScore(
-            score=db_row.retrieval_precision or 0.0,
-            details=db_row.retrieval_details or {},
-        ),
-        answer_relevance=MetricScore(
-            score=db_row.answer_relevance or 0.0,
-            details=db_row.relevance_details or {},
-        ),
-        context_coverage=MetricScore(
-            score=db_row.context_coverage or 0.0,
-            details=db_row.coverage_details or {},
-        ),
-        ucm_confidence=MetricScore(
-            score=db_row.ucm_score or 0.0,
-            details=db_row.ucm_details or {},
-        ),
-        metadata=db_row.extra_metadata or {},
-        latency_ms=db_row.latency_ms or 0,
+        id=_id,
+        question=_question,
+        context=_context,
+        answer=_answer,
+        overall_score=_overall_score,
+        faithfulness=faithfulness,
+        hallucination_rate=hallucination_rate,
+        retrieval_precision=retrieval_precision,
+        answer_relevance=answer_relevance,
+        context_coverage=context_coverage,
+        ucm_confidence=ucm_confidence,
+        metadata=_metadata,
+        latency_ms=_latency_ms,
     )
 
     if format == "json":

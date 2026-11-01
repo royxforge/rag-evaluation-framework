@@ -60,6 +60,7 @@ class ReportBuilder:
         Returns:
             Badge URL string.
         """
+        score: float | None
         if metric == "overall_score":
             score = self.result.overall_score
             label = "overall"
@@ -67,7 +68,9 @@ class ReportBuilder:
             score_obj = getattr(self.result, metric, None)
             if score_obj is None:
                 return ""
-            score = score_obj.score if hasattr(score_obj, "score") else 0.0
+            score = score_obj.score if hasattr(score_obj, "score") else None
+            if score is None:
+                return ""
             label = metric.replace("_", " ")
 
         color = "green" if score >= 0.8 else "orange" if score >= 0.6 else "red"

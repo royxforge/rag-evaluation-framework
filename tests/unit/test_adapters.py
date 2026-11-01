@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import importlib.util
+
 import pytest
 
 from rag_evaluation_framework.adapters import get_adapter
@@ -90,12 +92,26 @@ class TestMockLLMAdapter:
         assert isinstance(result, np.ndarray)
         assert result.shape == (2, 384)
 
+    @pytest.mark.skipif(
+        importlib.util.find_spec("sentence_transformers") is not None,
+        reason=(
+            "sentence-transformers is installed (it is in requirements.txt), so the "
+            "missing-dependency path cannot be exercised"
+        ),
+    )
     def test_get_embedder(self):
         """MockLLMAdapter.get_embedder raises a clear error when optional deps are missing."""
         adapter = MockLLMAdapter()
         with pytest.raises(ImportError, match="sentence-transformers"):
             adapter.get_embedder()
 
+    @pytest.mark.skipif(
+        importlib.util.find_spec("sentence_transformers") is not None,
+        reason=(
+            "sentence-transformers is installed (it is in requirements.txt), so the "
+            "missing-dependency path cannot be exercised"
+        ),
+    )
     def test_get_embedder_singleton(self):
         """Repeated get_embedder calls raise the same clear ImportError without the optional dep."""
         adapter = MockLLMAdapter()

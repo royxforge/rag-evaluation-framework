@@ -4,7 +4,8 @@ import clsx from "clsx";
 
 interface ScoreCardProps {
   title: string;
-  score: number;
+  /** null when the metric failed to compute. */
+  score: number | null;
   subtitle?: string;
   icon?: string;
   size?: "sm" | "md" | "lg";
@@ -13,17 +14,21 @@ interface ScoreCardProps {
 }
 
 export default function ScoreCard({ title, score, subtitle, icon, size = "md", explanation, invert }: ScoreCardProps) {
-  const effectiveScore = invert ? 1 - score : score;
+  const effectiveScore = score === null ? null : invert ? 1 - score : score;
 
   const colorClass =
-    effectiveScore >= 0.8
+    effectiveScore === null
+      ? "text-slate-400 dark:text-slate-500"
+      : effectiveScore >= 0.8
       ? "text-emerald-600 dark:text-emerald-400"
       : effectiveScore >= 0.6
       ? "text-amber-600 dark:text-amber-400"
       : "text-red-600 dark:text-red-400";
 
   const bgClass =
-    effectiveScore >= 0.8
+    effectiveScore === null
+      ? "bg-slate-50 dark:bg-slate-800/40"
+      : effectiveScore >= 0.8
       ? "bg-emerald-50 dark:bg-emerald-900/20"
       : effectiveScore >= 0.6
       ? "bg-amber-50 dark:bg-amber-900/20"
@@ -39,7 +44,7 @@ export default function ScoreCard({ title, score, subtitle, icon, size = "md", e
             "text-xl": size === "md",
             "text-lg": size === "sm",
           }, colorClass)}>
-            {(effectiveScore * 100).toFixed(0)}%
+            {effectiveScore === null ? "n/a" : `${(effectiveScore * 100).toFixed(0)}%`}
           </p>
           {subtitle && (
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{subtitle}</p>
@@ -50,11 +55,12 @@ export default function ScoreCard({ title, score, subtitle, icon, size = "md", e
       <div className="mt-3 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
         <div
           className={clsx("h-full rounded-full transition-all duration-500", {
-            "bg-emerald-500": effectiveScore >= 0.8,
-            "bg-amber-500": effectiveScore >= 0.6 && effectiveScore < 0.8,
-            "bg-red-500": effectiveScore < 0.6,
+            "bg-slate-400 dark:bg-slate-600": effectiveScore === null,
+            "bg-emerald-500": effectiveScore !== null && effectiveScore >= 0.8,
+            "bg-amber-500": effectiveScore !== null && effectiveScore >= 0.6 && effectiveScore < 0.8,
+            "bg-red-500": effectiveScore !== null && effectiveScore < 0.6,
           })}
-          style={{ width: `${(effectiveScore * 100).toFixed(0)}%` }}
+          style={{ width: `${effectiveScore === null ? 0 : (effectiveScore * 100).toFixed(0)}%` }}
         />
       </div>
       {explanation && (

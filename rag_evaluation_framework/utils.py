@@ -83,12 +83,12 @@ def compute_bleu(reference: str, hypothesis: str, max_n: int = 4) -> float:
     # N-gram precision
     scores = []
     for n in range(1, min(max_n, len(hyp_tokens)) + 1):
-        hyp_ngrams = {}
+        hyp_ngrams: dict[str, int] = {}
         for i in range(len(hyp_tokens) - n + 1):
             gram = " ".join(hyp_tokens[i: i + n])
             hyp_ngrams[gram] = hyp_ngrams.get(gram, 0) + 1
 
-        ref_ngrams = {}
+        ref_ngrams: dict[str, int] = {}
         for i in range(len(ref_tokens) - n + 1):
             gram = " ".join(ref_tokens[i: i + n])
             ref_ngrams[gram] = ref_ngrams.get(gram, 0) + 1

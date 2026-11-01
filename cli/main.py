@@ -26,6 +26,11 @@ from rag_evaluation_framework import Evaluator
 
 console = Console()
 
+def _fmt_score(score: float | None) -> str:
+    """Format a metric score, rendering failed metrics as "n/a"."""
+    return "n/a" if score is None else f"{score:.3f}"
+
+
 # Metrics where a higher score means better quality. `Hallucination Rate` is
 # the exception: its score is the rate itself (0.0 = clean, 1.0 = every claim
 # unsupported), so an *increase* is the regression.
@@ -111,37 +116,37 @@ def run(question: str, context_path: str, answer: str, llm: str, output: str | N
         ("Overall", f"{result.overall_score:.3f}", "", ""),
         (
             "Faithfulness",
-            f"{result.faithfulness.score:.3f}",
+            f"{_fmt_score(result.faithfulness.score)}",
             f"{result.faithfulness.confidence:.2f}",
             result.faithfulness.explanation[:60],
         ),
         (
             "Hallucination Rate",
-            f"{result.hallucination_rate.score:.3f}",
+            f"{_fmt_score(result.hallucination_rate.score)}",
             f"{result.hallucination_rate.confidence:.2f}",
             result.hallucination_rate.explanation[:60],
         ),
         (
             "Retrieval Precision",
-            f"{result.retrieval_precision.score:.3f}",
+            f"{_fmt_score(result.retrieval_precision.score)}",
             f"{result.retrieval_precision.confidence:.2f}",
             result.retrieval_precision.explanation[:60],
         ),
         (
             "Answer Relevance",
-            f"{result.answer_relevance.score:.3f}",
+            f"{_fmt_score(result.answer_relevance.score)}",
             f"{result.answer_relevance.confidence:.2f}",
             result.answer_relevance.explanation[:60],
         ),
         (
             "Context Coverage",
-            f"{result.context_coverage.score:.3f}",
+            f"{_fmt_score(result.context_coverage.score)}",
             f"{result.context_coverage.confidence:.2f}",
             result.context_coverage.explanation[:60],
         ),
         (
             "UCM Confidence",
-            f"{result.ucm_confidence.score:.3f}",
+            f"{_fmt_score(result.ucm_confidence.score)}",
             f"{result.ucm_confidence.confidence:.2f}",
             result.ucm_confidence.explanation[:60],
         ),
